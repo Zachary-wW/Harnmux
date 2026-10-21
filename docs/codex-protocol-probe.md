@@ -14,7 +14,7 @@ codex app-server --listen stdio://
 stdin/stdout 是每行一条 JSON 的双向 RPC，不使用 LSP Content-Length。发送：
 
 ```json
-{"id":1,"method":"initialize","params":{"clientInfo":{"name":"harness_bridge_protocol_probe","version":"0.1.0"},"capabilities":{"experimentalApi":false}}}
+{"id":1,"method":"initialize","params":{"clientInfo":{"name":"harnmux_protocol_probe","version":"0.1.0"},"capabilities":{"experimentalApi":false}}}
 ```
 
 实际返回 `result`，无 error；仅检查字段名：userAgent、codexHome、platformFamily、platformOs，未将实际目录值写入报告。随后发送 `{"method":"initialized"}`。关闭 stdin 并 SIGTERM 回收探针进程，未请求任务。稳定 schema 中没有通用 shutdown RPC，因此不能假设该方法存在。

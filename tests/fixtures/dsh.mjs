@@ -15,7 +15,7 @@ const agent={
   if(text.includes('HOLD')){await new Promise(resolve=>release=resolve);return {stopReason:'cancelled'};}
   const answer=await connection.requestPermission({sessionId,toolCall:{toolCallId:'write',title:'fixture write file.txt',kind:'execute',status:'pending',rawInput:{command:'fixture write'}},options:[{optionId:'allow-once',name:'允许一次',kind:'allow_once'},{optionId:'reject-once',name:'拒绝',kind:'reject_once'},{optionId:'allow-always',name:'Always',kind:'allow_always'}]});
   if(answer.outcome.outcome==='selected'&&answer.outcome.optionId==='allow-once')writeFileSync('file.txt','approved dsh change\n');
-  await connection.sessionUpdate({sessionId,update:{sessionUpdate:'agent_message_chunk',content:{type:'text',text:JSON.stringify({answer,model,scopedEnv:!!process.env.HBRIDGE_TOKEN})}}});
+  await connection.sessionUpdate({sessionId,update:{sessionUpdate:'agent_message_chunk',content:{type:'text',text:JSON.stringify({answer,model,scopedEnv:!!process.env.HARNMUX_TOKEN})}}});
   return {stopReason:'end_turn'};
  },
  async cancel(){release?.();}

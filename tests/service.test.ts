@@ -13,7 +13,7 @@ for(const [leaderHarness,workerHarness] of [['codex','dsh'],['dsh','codex']] as 
 test(`${workerHarness} entry → ${leaderHarness} leader → ${workerHarness} worker: scoped API and isolated delivery`,async()=>{
  const {repo,home}=await repository();let workerDenied=false;let leaderDeniedApproval=false;let childId='';
  const call=async(env:Record<string,string>,path:string,b?:unknown)=>{
-  const r=await fetch(env.HBRIDGE_URL+path,{method:b?'POST':'GET',headers:{Authorization:`Bearer ${env.HBRIDGE_TOKEN}`,'Content-Type':'application/json'},...(b?{body:JSON.stringify(b)}:{})});return {status:r.status,data:await r.json() as any};
+  const r=await fetch(env.HARNMUX_URL+path,{method:b?'POST':'GET',headers:{Authorization:`Bearer ${env.HARNMUX_TOKEN}`,'Content-Type':'application/json'},...(b?{body:JSON.stringify(b)}:{})});return {status:r.status,data:await r.json() as any};
  };
  const worker:Runner=async c=>{
   c.session(`${workerHarness}-session`,'native-default');
@@ -44,7 +44,7 @@ test(`${workerHarness} entry → ${leaderHarness} leader → ${workerHarness} wo
   assert.equal(root.entry,workerHarness);assert.equal(root.harness,leaderHarness);assert.equal(child.harness,workerHarness);assert.match(child.delivery!.diff,/worker-only/);
   assert.match(child.delivery!.diff,/new worker file/);assert.equal(child.delivery!.truncated,false);
   assert.equal(await readFile(join(repo,'file.txt'),'utf8'),'original\n');
-  assert.equal(JSON.stringify(app.service.detail(admin,root.id)).includes('HBRIDGE_TOKEN'),false);
+  assert.equal(JSON.stringify(app.service.detail(admin,root.id)).includes('HARNMUX_TOKEN'),false);
  }finally{await app.close();}
  const reopened=new TaskService(home,runners);assert.equal(reopened.store.list().length,2);await reopened.close();
 });
@@ -113,7 +113,7 @@ test('unconfirmed cancellation is bounded and never reported as confirmed cancel
 test('scoped secret is redacted in events, result and delivery, including spaced new filenames',async()=>{
  const {repo,home}=await repository();let secret='';
  const runner:Runner=async c=>{
-  secret=c.env.HBRIDGE_TOKEN!;c.event('fixture',{text:secret});
+  secret=c.env.HARNMUX_TOKEN!;c.event('fixture',{text:secret});
   await writeFile(join(c.task.worktree!,' leading space.txt'),secret);
   return {state:'completed',text:secret};
  };

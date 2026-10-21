@@ -39,8 +39,8 @@ Q9 已确认：可以新建 DSH worker，会复用已安装且在该运行模式
 
 - 事实评审：`docs/reference-architecture-review.md`。
 - 最小架构：`docs/architecture-proposal.md`。
-- 设计规范：`design-system/harness-bridge/MASTER.md`。
-- 明暗静态预览：`design-system/harness-bridge/previews/menu-bar-study.png`；由 SwiftUI 渲染，使用示例数据，不代表运行中的产品。
+- 设计规范：`design-system/harnmux/MASTER.md`。
+- 明暗静态预览：`design-system/harnmux/previews/menu-bar-study.png`；由 SwiftUI 渲染，使用示例数据，不代表运行中的产品。
 
 ## 首版范围外
 

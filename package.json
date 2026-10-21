@@ -1,11 +1,11 @@
 {
-  "name": "harness-bridge",
+  "name": "harnmux",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "Local native harness delegation with reviewable worktrees and a macOS status UI",
   "bin": {
-    "hbridge": "dist/cli.js"
+    "harnmux": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",

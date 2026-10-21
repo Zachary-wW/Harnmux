@@ -4,7 +4,7 @@ import type { Runner } from '../types.js';
 export const runDsh: Runner = async(ctx,prompt)=>{
   const runtime=createAcpRuntime({
     cwd:ctx.task.worktree!,
-    sessionStore:createFileSessionStore({stateDir:join(ctx.env.HBRIDGE_HOME!,'sessions',ctx.task.id)}),
+    sessionStore:createFileSessionStore({stateDir:join(ctx.env.HARNMUX_HOME!,'sessions',ctx.task.id)}),
     agentRegistry:createAgentRegistry({overrides:{dsh:ctx.profile.command ?? ['dsh','--profile','acp']}}),
     permissionMode:'deny-all',nonInteractivePermissions:'deny',agentProcessEnv:ctx.env,
   });

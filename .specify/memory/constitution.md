@@ -1,4 +1,4 @@
-# Harness Bridge Constitution
+# Harnmux Constitution
 
 ## Core Principles
 

@@ -67,18 +67,18 @@ flowchart TB
 sequenceDiagram
   actor User as 用户
   participant Entry as 当前 DSH 入口
-  participant Bridge as 任务服务
+  participant Harnmux as 任务服务
   participant Leader as Codex Leader
   participant Worker as 新 DSH Worker
   User->>Entry: 指定 Codex 负责，DSH 执行
-  Entry->>Bridge: 创建运行，显式指定 Leader/Worker 配置
-  Bridge->>Leader: 任务、上下文、验收条件及可派发成员
-  Leader->>Bridge: 派发具体任务给 DSH 成员
-  Bridge->>Worker: 独立 worktree + 原生配置
-  Worker-->>Bridge: 事件、审批、结果和验证记录
-  Bridge-->>Leader: 保存后交回结果
-  Leader->>Bridge: 验收反馈或继续同一 worker
-  Bridge-->>Entry: 结果供查询；自动回报按入口能力
+  Entry->>Harnmux: 创建运行，显式指定 Leader/Worker 配置
+  Harnmux->>Leader: 任务、上下文、验收条件及可派发成员
+  Leader->>Harnmux: 派发具体任务给 DSH 成员
+  Harnmux->>Worker: 独立 worktree + 原生配置
+  Worker-->>Harnmux: 事件、审批、结果和验证记录
+  Harnmux-->>Leader: 保存后交回结果
+  Leader->>Harnmux: 验收反馈或继续同一 worker
+  Harnmux-->>Entry: 结果供查询；自动回报按入口能力
   Entry-->>User: 展示 Leader 的结论及交付
 ```
 
@@ -137,6 +137,6 @@ DSH worker 的插件须使用其原生加载机制，复用用户明确选择的
 - 双向入口共用任务契约，增强入口不改变任务真相。
 - 模拟、持久化、执行成功、测试和代码验收分别留证。
 - 新基础设施必须说明收益，以及更简单方案为何不足。
-- UI 遵循 `design-system/harness-bridge/MASTER.md`，验证明暗、键盘及真实等待/错误状态。
+- UI 遵循 `design-system/harnmux/MASTER.md`，验证明暗、键盘及真实等待/错误状态。
 
 以上为前五项产品决策增加架构和质量约束，不自动扩大到跨平台、所有 harness/模型、完整原生子 agent 树或桌面聊天客户端。

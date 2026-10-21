@@ -45,9 +45,9 @@ src/
     rpc.ts        # bounded newline JSON-RPC subprocess client
 macos/
   Package.swift
-  Sources/HarnessBridge/  # menu-bar UI, API models and details
+  Sources/Harnmux/  # menu-bar UI, API models and details
 scripts/build-macos.sh
-integrations/harness-bridge/SKILL.md
+integrations/harnmux/SKILL.md
 examples/team.json
 tests/                    # orchestration and protocol integration fixtures
 ```

@@ -20,7 +20,7 @@ not a claim that real model teams or all native Desktop behaviors are production
 | `npm test` | PASS, 14/14 | Controlled service/API and real subprocess protocol fixtures |
 | `npm run ui:build` | PASS | SwiftUI debug source compilation |
 | `npm run ui:bundle` | PASS | Release app bundle and ad-hoc signing |
-| CLI lifecycle in isolated HBRIDGE_HOME | PASS | Start, idempotent start, doctor, empty list, authenticated stop; process exited and discovery/lock removed |
+| CLI lifecycle in isolated HARNMUX_HOME | PASS | Start, idempotent start, doctor, empty list, authenticated stop; process exited and discovery/lock removed |
 | Skill installer in disposable project | PASS | Absolute Node/CLI command, refusal to overwrite, existing file unchanged |
 | Dependency lock update/audit | PASS | Lockfile consistent; npm reported zero known vulnerabilities at this run |
 | Codex stdio initialize only | PASS | Actual installed app-server handshake, no native thread or model turn; see protocol probe |
@@ -58,7 +58,7 @@ details, exact native approval options, report/diff/events, Finder reveal, conti
 unread acknowledgment and cached offline list. Polling belongs to the app model rather than popup
 lifetime; execution belongs to the separate service. No custom animation is used.
 
-The design study in `design-system/harness-bridge/previews/` uses synthetic data and a separate
+The design study in `design-system/harnmux/previews/` uses synthetic data and a separate
 offscreen rendering script. It was visually reviewed in light/dark form; its measured contrast
 does not certify actual system materials or the running product. Native keyboard focus, Tab/
 Shift-Tab, Escape, VoiceOver, actual light/dark contrast, long approval scrolling and clicking a

@@ -68,7 +68,7 @@ Q1–Q5、Q9 与 Q10 已形成实现基线。Q6 的范围调整落实为源码�
 - acpx 已有嵌入 runtime，评估复用，避免重复编写 ACP client；审批契约需按 API 分别验证。
 - 模型路由与任务协调分开，复用 Magpie/原生模型配置。
 - UI 已采用 SwiftUI MenuBarExtra，原始技能建议经过平台适配，未机械使用营销页布局或字体。
-- 证据、推导和提案见 `docs/reference-architecture-review.md`、`docs/architecture-proposal.md` 和 `design-system/harness-bridge/MASTER.md`。
+- 证据、推导和提案见 `docs/reference-architecture-review.md`、`docs/architecture-proposal.md` 和 `design-system/harnmux/MASTER.md`。
 
 ## 已核实的本机事实
 

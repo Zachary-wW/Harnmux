@@ -28,7 +28,7 @@ export const runCodex: Runner = async(ctx,prompt)=>{
             rpc.send({id:m.id,result:{permissions:decision==='accept'?p.permissions:{},scope:'turn'}});
           }else{
             ctx.event('unsupported_request',{method:m.method});
-            rpc.send({id:m.id,error:{code:-32601,message:'Bridge does not support this interactive native request'}});
+            rpc.send({id:m.id,error:{code:-32601,message:'Harnmux does not support this interactive native request'}});
           }
         }catch{if(m.method==='item/permissions/requestApproval')rpc.send({id:m.id,result:{permissions:{},scope:'turn'}});
           else rpc.send({id:m.id,result:{decision:'decline'}});}
@@ -53,7 +53,7 @@ export const runCodex: Runner = async(ctx,prompt)=>{
     }else if(m.method==='error')ctx.event('native_error',p);
   };
   try{
-    await rpc.request('initialize',{clientInfo:{name:'harness_bridge',version:'0.1.0'},capabilities:{experimentalApi:false}});
+    await rpc.request('initialize',{clientInfo:{name:'harnmux',version:'0.1.0'},capabilities:{experimentalApi:false}});
     rpc.send({method:'initialized'});
     const params={cwd:ctx.task.worktree,sandbox:'workspace-write',approvalPolicy:'on-request',approvalsReviewer:'user',...(ctx.profile.model?{model:ctx.profile.model}:{})};
     const response=await rpc.request(threadId?'thread/resume':'thread/start',{...params,...(threadId?{threadId}:{})});

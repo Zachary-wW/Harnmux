@@ -1,6 +1,6 @@
 // Static design study only. No harness connection or actionable approvals.
-// swiftc -parse-as-library RenderPreview.swift -o /tmp/harness-bridge-ui-preview
-// /tmp/harness-bridge-ui-preview <absolute-output.png>
+// swiftc -parse-as-library RenderPreview.swift -o /tmp/harnmux-ui-preview
+// /tmp/harnmux-ui-preview <absolute-output.png>
 import SwiftUI
 import AppKit
 
@@ -36,7 +36,7 @@ struct Panel: View {
             HStack {
                 HStack(spacing: 8) {
                     Image(systemName: "point.3.connected.trianglepath.dotted").font(.system(size: 17))
-                    Text("Harness Bridge").font(.system(size: 16, weight: .semibold))
+                    Text("Harnmux").font(.system(size: 16, weight: .semibold))
                 }
                 Spacer()
                 Image(systemName: "gearshape").foregroundStyle(p.muted)
@@ -120,7 +120,7 @@ struct Study: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Harness Bridge").font(.system(size: 25, weight: .semibold)).foregroundStyle(Color(white: 0.12))
+                Text("Harnmux").font(.system(size: 25, weight: .semibold)).foregroundStyle(Color(white: 0.12))
                 Text("状态栏设计提案 / 原生 SwiftUI 排版 / 非运行中产品")
                     .font(.system(size: 13)).foregroundStyle(Color(white: 0.36))
             }
@@ -145,7 +145,7 @@ struct Study: View {
 @MainActor
 struct RenderPreview {
     static func main() throws {
-        let target = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "/tmp/harness-bridge-menu-bar.png"
+        let target = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "/tmp/harnmux-menu-bar.png"
         let renderer = ImageRenderer(content: Study())
         renderer.scale = 2
         guard let cg = renderer.cgImage else { fatalError("SwiftUI render failed") }

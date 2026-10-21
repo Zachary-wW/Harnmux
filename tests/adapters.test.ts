@@ -41,7 +41,7 @@ for(const harness of ['codex','dsh'] as const){
 test('native failures and unavailable DSH model fail explicitly; Codex retains final answer',async()=>{
  const {repo,home}=await repository();await mkdir(home);
  await writeFile(join(home,'config.json'),JSON.stringify({profiles:{
-  missing:{harness:'codex',command:['/nonexistent/hbridge-native']},
+  missing:{harness:'codex',command:['/nonexistent/harnmux-native']},
   dsh:{harness:'dsh',command:fixture('dsh'),model:'unavailable-model'},
   codex:{harness:'codex',command:fixture('codex')},
  }}));

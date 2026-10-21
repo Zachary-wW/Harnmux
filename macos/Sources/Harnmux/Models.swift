@@ -1,6 +1,6 @@
 import Foundation
 
-struct BridgeTask: Codable, Identifiable, Sendable {
+struct HarnmuxTask: Codable, Identifiable, Sendable {
     let id: String
     let role: String
     let parentId: String?
@@ -17,6 +17,11 @@ struct BridgeTask: Codable, Identifiable, Sendable {
     let error: String?
     let updatedAt: String
     let unread: Bool
+    let turn: Int
+    let acceptanceCriteria: [String]?
+    let deliveryDigest: String?
+    let leaderReview: ReviewReceipt?
+    let acceptance: ReviewReceipt?
     let delivery: Delivery?
     struct Delivery: Codable, Sendable {
         let diff: String
@@ -31,7 +36,7 @@ struct BridgeTask: Codable, Identifiable, Sendable {
         case "running": "执行中"
         case "waiting_approval": "等待审批"
         case "cancelling": "取消中"
-        case "completed": "执行完成 · 待验收"
+        case "completed": acceptance?.decision == "accept" ? "执行完成 · 快照已验收" : acceptance?.decision == "request_changes" ? "执行完成 · 需修改" : "执行完成 · 待验收"
         case "failed": "失败"
         case "cancelled": "已取消"
         case "interrupted": "已中断 · 需核查"
@@ -39,21 +44,36 @@ struct BridgeTask: Codable, Identifiable, Sendable {
         }
     }
 }
-struct TaskList: Codable { let tasks: [BridgeTask] }
-struct TaskDetail: Decodable, Sendable {
-    let task: BridgeTask
-    let approvals: [BridgeApproval]
-    let events: [BridgeEvent]
-    let children: [BridgeTask]
+struct ReviewReceipt: Codable, Sendable {
+    let turn: Int
+    let digest: String
+    let decision: String
+    let note: String
+    let at: String
+    var label: String {
+        switch decision {
+        case "accept": "已验收快照"
+        case "recommend_accept": "建议验收"
+        default: "要求修改"
+        }
+    }
 }
-struct BridgeEvent: Decodable, Sendable, Identifiable {
+struct TaskList: Codable { let tasks: [HarnmuxTask] }
+struct TaskDetail: Decodable, Sendable {
+    let task: HarnmuxTask
+    let approvals: [HarnmuxApproval]
+    let events: [HarnmuxEvent]
+    let children: [HarnmuxTask]
+    var finalizing: Bool? = nil
+}
+struct HarnmuxEvent: Decodable, Sendable, Identifiable {
     let seq: Int
     var id: Int { seq }
     let kind: String
     let data: JSONValue
     let at: String
 }
-struct BridgeApproval: Decodable, Identifiable, Sendable {
+struct HarnmuxApproval: Decodable, Identifiable, Sendable {
     let id: String
     let taskId: String
     let method: String

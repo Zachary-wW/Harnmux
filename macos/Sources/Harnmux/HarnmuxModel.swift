@@ -3,8 +3,8 @@ import SwiftUI
 import AppKit
 
 @MainActor
-final class BridgeModel: ObservableObject {
-    @Published var tasks: [BridgeTask] = []
+final class HarnmuxModel: ObservableObject {
+    @Published var tasks: [HarnmuxTask] = []
     @Published var detail: TaskDetail?
     @Published var selected: String?
     @Published var connectionError: String? = "正在连接本地服务…"
@@ -26,17 +26,17 @@ final class BridgeModel: ObservableObject {
     deinit { poller?.cancel() }
 
     var home: URL {
-        if let path = ProcessInfo.processInfo.environment["HBRIDGE_HOME"] {
+        if let path = ProcessInfo.processInfo.environment["HARNMUX_HOME"] {
             return URL(fileURLWithPath: path)
         }
-        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".harness-bridge")
+        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".harnmux")
     }
     var pending: Int { tasks.filter { $0.state == "waiting_approval" }.count }
     var running: Int { tasks.filter { $0.active && $0.state != "waiting_approval" }.count }
     var unread: Int { tasks.filter(\.unread).count }
     var statusText: String { pending > 0 ? "\(pending) 待处理" : running > 0 ? "\(running) 运行中" : unread > 0 ? "\(unread) 条结果" : "" }
 
-    private func request(_ path: String, body: [String: String]? = nil) async throws -> Data {
+    private func request(_ path: String, body: [String: JSONValue]? = nil) async throws -> Data {
         let endpoint = try Data(contentsOf: home.appendingPathComponent("endpoint.json"))
         let info = try JSONDecoder().decode(Endpoint.self, from: endpoint)
         guard let base = URL(string: info.url), base.scheme == "http", base.host == "127.0.0.1",
@@ -74,7 +74,7 @@ final class BridgeModel: ObservableObject {
             connectionError = nil
             lastRefresh = Date()
         } catch {
-            if !Task.isCancelled { connectionError = "服务未连接，显示上次数据。请启动 hbridge serve。" }
+            if !Task.isCancelled { connectionError = "服务未连接，显示上次数据。请启动 harnmux serve。" }
         }
     }
     func select(_ id: String) async {
@@ -84,12 +84,21 @@ final class BridgeModel: ObservableObject {
             detail = TaskDetail(task: cached, approvals: [], events: [], children: tasks.filter { $0.parentId == id })
         }
     }
-    func perform(_ path: String, body: [String: String] = [:]) async {
+    func perform(_ path: String, body: [String: JSONValue] = [:]) async {
         guard !busy else { return }
         busy = true; operationError = nil
         defer { busy = false }
         do { _ = try await request(path, body: body); await refresh() }
         catch { operationError = error.localizedDescription }
+    }
+    func copyPacket(_ task: HarnmuxTask) async {
+        guard !busy else { return }
+        busy = true; operationError = nil
+        defer { busy = false }
+        do {
+            let data = try await request("/v1/tasks/\(task.id)/packet?turn=\(task.turn)")
+            copy(String(decoding: data, as: UTF8.self))
+        } catch { operationError = error.localizedDescription }
     }
     func reveal(_ path: String) {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])

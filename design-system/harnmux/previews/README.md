@@ -5,8 +5,8 @@
 在 macOS、已配置 SwiftUI SDK 的 Swift 工具链中，从仓库根目录复现：
 
 ```sh
-swiftc -parse-as-library design-system/harness-bridge/previews/RenderPreview.swift -o /tmp/harness-bridge-ui-preview
-/tmp/harness-bridge-ui-preview "$PWD/design-system/harness-bridge/previews/menu-bar-study.png"
+swiftc -parse-as-library design-system/harnmux/previews/RenderPreview.swift -o /tmp/harnmux-ui-preview
+/tmp/harnmux-ui-preview "$PWD/design-system/harnmux/previews/menu-bar-study.png"
 ```
 
 2026-10-21 验证：Swift 编译和 PNG 导出通过，已目视检查主要排版、中文、分隔线、明暗状态和内容边界。固定配色以 WCAG 相对亮度公式计算，正文/辅助/状态文字在其两种表面上的最低对比度：浅色 5.76:1、深色 6.22:1；蓝色主按钮白字 5.75:1。正式系统语义色、半透明材料、显示器和辅助设置仍需独立验证。

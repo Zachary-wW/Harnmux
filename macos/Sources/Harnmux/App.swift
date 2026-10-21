@@ -2,8 +2,8 @@ import SwiftUI
 import AppKit
 
 @main
-struct HarnessBridgeApp: App {
-    @StateObject private var model = BridgeModel()
+struct HarnmuxApp: App {
+    @StateObject private var model = HarnmuxModel()
     var body: some Scene {
         MenuBarExtra {
             StatusPanel(model: model)
@@ -13,16 +13,17 @@ struct HarnessBridgeApp: App {
             } icon: {
                 Image(systemName: model.connectionError != nil ? "wifi.slash" : model.pending > 0 ? "hand.raised" : "point.3.connected.trianglepath.dotted")
             }
-            .accessibilityLabel("Harness Bridge，\(model.statusText.isEmpty ? "无活动任务" : model.statusText)")
+            .accessibilityLabel("Harnmux，\(model.statusText.isEmpty ? "无活动任务" : model.statusText)")
         }
         .menuBarExtraStyle(.window)
     }
 }
 
 struct StatusPanel: View {
-    @ObservedObject var model: BridgeModel
+    @ObservedObject var model: HarnmuxModel
     @State private var continuation = ""
     @State private var showEvents = false
+    @State private var reviewNote = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -53,7 +54,7 @@ struct StatusPanel: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Menu {
-                    Button("打开 Bridge 配置目录") { model.reveal(model.home.path) }
+                    Button("打开 Harnmux 配置目录") { model.reveal(model.home.path) }
                     Button("退出界面（任务继续）") { NSApplication.shared.terminate(nil) }
                 } label: { Image(systemName: "gearshape") }
                 .menuStyle(.borderlessButton).fixedSize()
@@ -63,13 +64,13 @@ struct StatusPanel: View {
         .padding(16)
         .frame(width: 420)
         .frame(maxHeight: 620)
-        .onChange(of: model.selected) { _, _ in continuation = ""; showEvents = false }
+        .onChange(of: model.selected) { _, _ in continuation = ""; showEvents = false; reviewNote = "" }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Label("Harness Bridge", systemImage: "point.3.connected.trianglepath.dotted").font(.headline)
+                Label("Harnmux", systemImage: "point.3.connected.trianglepath.dotted").font(.headline)
                 Spacer()
                 Button { Task { await model.refresh() } } label: { Image(systemName: "arrow.clockwise") }
                     .buttonStyle(.plain).accessibilityLabel("刷新任务")
@@ -89,7 +90,7 @@ struct StatusPanel: View {
                 ContentUnavailableView {
                     Label("尚无协作任务", systemImage: "tray")
                 } description: {
-                    Text("在 Codex 或 DSH 中使用 Bridge Skill 发起任务。入口与 Leader 可以分别选择。")
+                    Text("在 Codex 或 DSH 中使用 Harnmux Skill 发起任务。入口与 Leader 可以分别选择。")
                 }.frame(minHeight: 190)
             } else {
                 List {
@@ -103,7 +104,7 @@ struct StatusPanel: View {
             }
         }
     }
-    private func row(_ task: BridgeTask) -> some View {
+    private func row(_ task: HarnmuxTask) -> some View {
         Button { Task { await model.select(task.id) } } label: {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: symbol(task)).foregroundStyle(color(task)).frame(width: 20)
@@ -149,10 +150,38 @@ struct StatusPanel: View {
             if let error = d.task.error { Text(error).foregroundStyle(.red).textSelection(.enabled) }
             if let result = d.task.result, !result.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("执行报告").font(.headline)
+                    Text("模型执行报告").font(.headline)
+                    Text("由原生 harness 返回；测试结论未经过独立验证。").font(.caption).foregroundStyle(.secondary)
                     Text(result).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
                     Button("复制报告") { model.copy(result) }
                 }
+            }
+            if let criteria = d.task.acceptanceCriteria, !criteria.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("验收标准").font(.headline)
+                    ForEach(Array(criteria.enumerated()), id: \.offset) { item in
+                        Text("\(item.offset + 1). \(item.element)").textSelection(.enabled)
+                    }
+                }
+            }
+            if let digest = d.task.deliveryDigest {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("第 \(d.task.turn) 回合 · 固定交付快照", systemImage: "doc.text.magnifyingglass").font(.headline)
+                    Text(digest).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
+                    Text("验收仅针对此快照；后续工作区修改需重新交付。不会自动合入。").font(.caption).foregroundStyle(.secondary)
+                    if let review = d.task.leaderReview { receipt("Leader 意见", review) }
+                    if let review = d.task.acceptance { receipt("你的决定", review) }
+                    Button("复制完整交付与审查记录") { Task { await model.copyPacket(d.task) } }
+                        .disabled(model.busy || model.connectionError != nil)
+                    TextField("填写验收或修改意见", text: $reviewNote, axis: .vertical).lineLimit(2...5)
+                    ViewThatFits(in: .horizontal) {
+                        HStack { reviewButtons(d, digest) }
+                        VStack(alignment: .leading) { reviewButtons(d, digest) }
+                    }
+                }.padding(12).background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 9))
+            } else if !d.task.active {
+                Text(d.finalizing == true ? "正在整理交付快照…" : "此回合尚无交付快照，无法验收。请查看执行事件。")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             if let delivery = d.task.delivery {
                 DisclosureGroup("文件差异") {
@@ -187,8 +216,8 @@ struct StatusPanel: View {
                 TextField("追加要求", text: $continuation, axis: .vertical).lineLimit(2...6)
                 Button("继续原生会话") {
                     let text = continuation
-                    Task { await model.perform("/v1/tasks/\(d.task.id)/continue", body: ["instructions": text]); if model.operationError == nil { continuation = "" } }
-                }.disabled(continuation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.busy || model.connectionError != nil)
+                    Task { await model.perform("/v1/tasks/\(d.task.id)/continue", body: ["instructions": .string(text)]); if model.operationError == nil { continuation = "" } }
+                }.disabled(continuation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.busy || model.connectionError != nil || d.finalizing == true)
             }
             if d.task.unread {
                 Button("标记结果已读") { Task { await model.perform("/v1/tasks/\(d.task.id)/ack") } }
@@ -196,15 +225,37 @@ struct StatusPanel: View {
             }
         }
     }
-    private func decisionButtons(_ approval: BridgeApproval) -> some View {
+    private func receipt(_ title: String, _ review: ReviewReceipt) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("\(title)：\(review.label)").font(.subheadline.weight(.medium))
+            Text(review.note).font(.caption).textSelection(.enabled)
+        }
+    }
+    private func reviewButtons(_ d: TaskDetail, _ digest: String) -> some View {
+        ForEach(["accept", "request_changes"], id: \.self) { decision in
+            Button(decision == "accept" ? "验收此快照" : "要求修改") {
+                let note = reviewNote
+                Task {
+                    await model.perform("/v1/tasks/\(d.task.id)/review", body: [
+                        "turn": .number(Double(d.task.turn)), "digest": .string(digest),
+                        "decision": .string(decision), "note": .string(note)
+                    ])
+                    if model.operationError == nil { reviewNote = "" }
+                }
+            }.disabled(model.busy || model.connectionError != nil || d.task.active || d.finalizing == true ||
+                       reviewNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                       (decision == "accept" && (d.task.state != "completed" || d.task.delivery == nil || d.task.delivery?.truncated == true)))
+        }
+    }
+    private func decisionButtons(_ approval: HarnmuxApproval) -> some View {
         ForEach(approval.options) { option in
             Button(option.label) {
-                Task { await model.perform("/v1/approvals/\(approval.id)", body: ["optionId": option.id]) }
+                Task { await model.perform("/v1/approvals/\(approval.id)", body: ["optionId": .string(option.id)]) }
             }.disabled(model.busy || model.connectionError != nil)
                 .accessibilityLabel("\(option.label)，任务 \(model.detail?.task.title ?? approval.taskId)")
         }
     }
-    private func symbol(_ t: BridgeTask) -> String {
+    private func symbol(_ t: HarnmuxTask) -> String {
         switch t.state {
         case "waiting_approval": "hand.raised"
         case "completed": "checkmark.circle"
@@ -213,7 +264,7 @@ struct StatusPanel: View {
         default: "circle.dotted"
         }
     }
-    private func color(_ t: BridgeTask) -> Color {
+    private func color(_ t: HarnmuxTask) -> Color {
         switch t.state {
         case "waiting_approval", "interrupted": .orange
         case "failed": .red

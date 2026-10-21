@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { git } from '../src/workspace.js';
 export async function repository(){
-  const root=await mkdtemp(join(tmpdir(),'hbridge-test-'));const repo=join(root,'repo');
+  const root=await mkdtemp(join(tmpdir(),'harnmux-test-'));const repo=join(root,'repo');
   await import('node:fs/promises').then(fs=>fs.mkdir(repo));
   await git(repo,['init','-b','main']);await git(repo,['config','user.email','fixture@example.invalid']);await git(repo,['config','user.name','Fixture']);
   await writeFile(join(repo,'file.txt'),'original\n');await git(repo,['add','.']);await git(repo,['commit','-m','fixture baseline']);

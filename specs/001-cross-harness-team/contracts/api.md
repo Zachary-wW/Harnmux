@@ -17,13 +17,13 @@ POST /v1/approvals/:id {optionId} → once-only native decision; admin only, sta
 GET /v1/capabilities → supported/unsupported/unverified per profile and operation.
 POST /v1/shutdown {} → admin-only service shutdown; cancellation requests precede closure.
 
-CLI: hbridge start (detached/idempotent); hbridge serve (foreground); hbridge stop;
-hbridge doctor; hbridge run --repo PATH --leader PROFILE --workers PROFILE,...
---entry LABEL --request-id KEY --task TEXT [--base REF]; hbridge dispatch --profile PROFILE --task
-TEXT --request-id KEY (Leader env); hbridge list; hbridge status ID; hbridge result ID; hbridge
-wait ID [--timeout SECONDS]; hbridge continue ID --task TEXT; hbridge cancel ID; hbridge approve
-APPROVAL_ID --option OPTION_ID; hbridge ack ID. JSON stdout; warnings/errors stderr.
+CLI: harnmux start (detached/idempotent); harnmux serve (foreground); harnmux stop;
+harnmux doctor; harnmux run --repo PATH --leader PROFILE --workers PROFILE,...
+--entry LABEL --request-id KEY --task TEXT [--base REF]; harnmux dispatch --profile PROFILE --task
+TEXT --request-id KEY (Leader env); harnmux list; harnmux status ID; harnmux result ID; harnmux
+wait ID [--timeout SECONDS]; harnmux continue ID --task TEXT; harnmux cancel ID; harnmux approve
+APPROVAL_ID --option OPTION_ID; harnmux ack ID. JSON stdout; warnings/errors stderr.
 
-HBRIDGE_HOME chooses bridge state only. HBRIDGE_URL/HBRIDGE_TOKEN child env selects scoped API;
-profiles are read from HBRIDGE_HOME/config.json only. URLs are loopback-only. Agent integration
+HARNMUX_HOME chooses bridge state only. HARNMUX_URL/HARNMUX_TOKEN child env selects scoped API;
+profiles are read from HARNMUX_HOME/config.json only. URLs are loopback-only. Agent integration
 must query after timeout, never repeat with a new submission ID to guess whether a task started.

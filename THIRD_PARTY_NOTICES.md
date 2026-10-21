@@ -1,6 +1,6 @@
 # Third-party notices
 
-The repository MIT license covers the original Harness Bridge implementation. It does not
+The repository MIT license covers the original Harnmux implementation. It does not
 relicense dependencies, vendor harnesses, referenced projects or upstream generated tooling.
 
 - [acpx](https://github.com/openclaw/acpx) 0.20.0 — MIT; embedded ACP runtime dependency.

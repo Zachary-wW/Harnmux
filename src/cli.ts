@@ -15,22 +15,22 @@ function which(command:string){
   return null;
 }
 async function main(){
-  const {positionals,values:v}=parseArgs({allowPositionals:true,options:{repo:{type:'string'},leader:{type:'string'},profile:{type:'string'},workers:{type:'string'},entry:{type:'string'},'request-id':{type:'string'},task:{type:'string'},base:{type:'string'},option:{type:'string'},timeout:{type:'string'},help:{type:'boolean'}}});
+  const {positionals,values:v}=parseArgs({allowPositionals:true,options:{repo:{type:'string'},leader:{type:'string'},profile:{type:'string'},workers:{type:'string'},entry:{type:'string'},'request-id':{type:'string'},task:{type:'string'},base:{type:'string'},option:{type:'string'},timeout:{type:'string'},criterion:{type:'string',multiple:true},turn:{type:'string'},digest:{type:'string'},decision:{type:'string'},note:{type:'string'},help:{type:'boolean'}}});
   const [cmd,id]=positionals;
-  if(!cmd||v.help||cmd==='help'){print({usage:'hbridge start | serve | stop | doctor | run --repo PATH --leader PROFILE --workers PROFILE,... --request-id KEY --task TEXT | dispatch --profile PROFILE --request-id KEY --task TEXT | list | status ID | result ID | wait ID --timeout 60 | continue ID --task TEXT | cancel ID | approve ID --option NATIVE_ID | ack ID',home:defaultHome()});return;}
+  if(!cmd||v.help||cmd==='help'){print({usage:'harnmux start | serve | stop | doctor | run --repo PATH --leader PROFILE --workers PROFILE,... --request-id KEY --task TEXT [--criterion TEXT ...] | dispatch --profile PROFILE --request-id KEY --task TEXT [--criterion TEXT ...] | list | status ID | result ID | packet ID [--turn N] | review ID --turn N --digest HASH --decision accept|request_changes|recommend_accept --note TEXT | wait ID --timeout 60 | continue ID --task TEXT [--criterion TEXT ...] | cancel ID | approve ID --option NATIVE_ID | ack ID',home:defaultHome()});return;}
   if(cmd==='serve'){
     const app=await startServer(defaultHome());print({listening:app.service.url,home:defaultHome()});
     let stopping=false;for(const signal of ['SIGINT','SIGTERM'] as const)process.on(signal,()=>{if(!stopping){stopping=true;void app.close().then(()=>process.exit(0),()=>process.exit(1));}});return;
   }
   if(cmd==='start'){
-    if(process.env.HBRIDGE_TOKEN)throw new Error('Task credentials cannot start a service');
+    if(process.env.HARNMUX_TOKEN)throw new Error('Task credentials cannot start a service');
     const health=async()=>{try{const c=connection();const r=await fetch(c.url+'/v1/tasks',{headers:{Authorization:`Bearer ${c.token}`},signal:AbortSignal.timeout(500)});return r.ok;}catch{return false;}};
     if(await health()){print({running:true,home:defaultHome()});return;}
     privateDir(defaultHome());const fd=openSync(join(defaultHome(),'service.log'),'a',0o600);
     const child=spawn(process.execPath,[fileURLToPath(import.meta.url),'serve'],{detached:true,stdio:['ignore',fd,fd],env:process.env});
     closeSync(fd);child.unref();let spawnError:Error|undefined;child.on('error',e=>spawnError=e);
     for(let i=0;i<50;i++){await sleep(100);if(spawnError)throw spawnError;if(await health()){print({started:true,home:defaultHome()});return;}}
-    throw new Error('Service did not start; inspect Bridge service.log');
+    throw new Error('Service did not start; inspect Harnmux service.log');
   }
   if(cmd==='doctor'){
     const profiles=loadProfiles(defaultHome());print({node:process.version,profiles:Object.fromEntries(Object.entries(profiles).map(([name,p])=>[name,{harness:p.harness,model:p.model ?? '(native default)',executable:which(p.command?.[0] ?? p.harness),nativeTaskVerified:false}])),desktopWakeup:'unsupported; query results with wait/status',specificPlugins:'owned by DSH; not modified or individually verified'});return;
@@ -42,7 +42,7 @@ async function main(){
   };
   if(cmd==='run'||cmd==='dispatch'){
     if(!v.task||!v['request-id'])throw new Error('--task and stable --request-id are required');
-    print(await request('/v1/tasks',{requestId:v['request-id'],profile:cmd==='run'?v.leader ?? 'codex':v.profile ?? 'dsh',instructions:v.task,
+    print(await request('/v1/tasks',{requestId:v['request-id'],profile:cmd==='run'?v.leader ?? 'codex':v.profile ?? 'dsh',instructions:v.task,acceptanceCriteria:v.criterion,
       ...(cmd==='run'?{entry:v.entry??'cli',repo:resolve(v.repo??process.cwd()),baseRef:v.base??'HEAD',allowedWorkers:v.workers?.split(',').filter(Boolean)??[]}: {})}));return;
   }
   if(cmd==='stop'){print(await request('/v1/shutdown',{}));return;}
@@ -55,11 +55,13 @@ async function main(){
   if(cmd==='wait'){
     const seconds=Number(v.timeout??60);if(!Number.isFinite(seconds)||seconds<1||seconds>300)throw new Error('--timeout must be 1–300 seconds');
     const end=Date.now()+seconds*1000;
-    while(true){const d=await request(taskPath);if(terminal((d.task as Task).state)){print(d);return;}
+    while(true){const d=await request(taskPath);if(terminal((d.task as Task).state)&&!d.finalizing){print(d);return;}
       if(d.task.state==='waiting_approval'){print({waitingForUser:true,...d});return;}
       if(Date.now()>=end){print({timedOut:true,...d});return;}await sleep(750);}
   }
-  if(cmd==='continue'){if(!v.task)throw new Error('--task required');print(await request(taskPath+'/continue',{instructions:v.task}));return;}
+  if(cmd==='packet'){const turn=v.turn===undefined?undefined:Number(v.turn);if(turn!==undefined&&(!Number.isSafeInteger(turn)||turn<1))throw new Error('--turn must be a positive integer');print(await request(taskPath+'/packet'+(turn===undefined?'':`?turn=${turn}`)));return;}
+  if(cmd==='review'){if(!v.turn||!v.digest||!v.decision||!v.note)throw new Error('--turn, --digest, --decision and --note are required');print(await request(taskPath+'/review',{turn:Number(v.turn),digest:v.digest,decision:v.decision,note:v.note}));return;}
+  if(cmd==='continue'){if(!v.task)throw new Error('--task required');print(await request(taskPath+'/continue',{instructions:v.task,acceptanceCriteria:v.criterion}));return;}
   if(cmd==='cancel'||cmd==='ack'){print(await request(taskPath+'/'+cmd,{}));return;}
   if(cmd==='approve'){if(!v.option)throw new Error('--option required');print(await request(`/v1/approvals/${encodeURIComponent(id)}`,{optionId:v.option}));return;}
   throw new Error(`Unknown command: ${cmd}`);

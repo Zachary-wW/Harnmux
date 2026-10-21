@@ -6,8 +6,8 @@
 
 优先复用 `createAcpRuntime()`，而非 shared runtime；每任务一个 runtime 可提供独立 child-only env 与审批回调。保持一个 native session 只有一个连接/进程所有者，外围服务负责本项目任务/worktree/UI。
 
-- `agentProcessEnv` 为 runtime 级快照，传给所拥有的子进程，不写入 session store；同一 runtime 没有逐 session env resolver。因此若要每任务注入不同的 Bridge 作用域 token，使用独立 runtime，不改全局 `process.env`。
-- 子进程继承原始 `process.env`，再叠加 `agentProcessEnv`；acpx 保护的认证变量不可被该 overlay 覆盖。Bridge 自定义变量不应伪装为 provider 认证变量。
+- `agentProcessEnv` 为 runtime 级快照，传给所拥有的子进程，不写入 session store；同一 runtime 没有逐 session env resolver。因此若要每任务注入不同的 Harnmux 作用域 token，使用独立 runtime，不改全局 `process.env`。
+- 子进程继承原始 `process.env`，再叠加 `agentProcessEnv`；acpx 保护的认证变量不可被该 overlay 覆盖。Harnmux 自定义变量不应伪装为 provider 认证变量。
 - DSH 作为自定义 agent 注册 `['dsh', '--profile', 'acp']`，argv 数组避免 shell 拼接；DSH 并非内置 registry 项。
 
 ## 最小接口示例

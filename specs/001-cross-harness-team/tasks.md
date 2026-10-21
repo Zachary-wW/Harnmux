@@ -15,7 +15,7 @@ Input: spec.md, plan.md, research.md, data-model.md and contracts/api.md.
 - [x] T006 [US1] Add role/dedup/workspace acceptance tests in tests/service.test.ts.
 - [x] T007 [US1] Implement scoped Leader/Worker orchestration in src/service.ts.
 - [x] T008 [US1] Implement authenticated HTTP and CLI operations in src/server.ts and src/cli.ts.
-- [x] T009 [US1] Write shared native entry/Leader Skill and profiles example in integrations/harness-bridge/SKILL.md and examples/team.json.
+- [x] T009 [US1] Write shared native entry/Leader Skill and profiles example in integrations/harnmux/SKILL.md and examples/team.json.
 
 ## Phase 4: US2 — Native execution/approval
 - [x] T010 [US2] Add fake newline RPC and ACP executables and adapter integration checks in tests/fixtures/ and tests/adapters.test.ts.
@@ -24,7 +24,7 @@ Input: spec.md, plan.md, research.md, data-model.md and contracts/api.md.
 
 ## Phase 5: US3 — Durable observation/native UI
 - [x] T013 [US3] Test stale approvals, continuation, cancellation and restart in tests/service.test.ts and tests/server.test.ts.
-- [x] T014 [US3] Implement menu-bar activity, native decisions, delivery details and offline state in macos/Sources/HarnessBridge/.
+- [x] T014 [US3] Implement menu-bar activity, native decisions, delivery details and offline state in macos/Sources/Harnmux/.
 - [x] T015 [US3] Bundle the native UI and verify Swift build using macos/Package.swift and scripts/build-macos.sh.
 
 ## Phase 6: Review/delivery

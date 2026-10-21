@@ -6,7 +6,7 @@
 
 ---
 
-**Project:** Harness Bridge
+**Project:** Harnmux
 **Generated:** 2026-10-21 15:58:37
 **Category:** Productivity Tool
 

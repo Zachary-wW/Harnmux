@@ -1,4 +1,4 @@
-# Harness Bridge — macOS 设计规范
+# Harnmux — macOS 设计规范
 
 状态：2026-10-21 SwiftUI 实现基线。原生源码已编译；静态预览与真实交互验收分开记录，见 feature verification.md。
 
@@ -18,8 +18,8 @@
 2. 弹层顶部：名称、连接状态、运行中和待处理数量；当前运行明确区分交流入口与 Leader（例如“入口 DSH · 负责人 Codex”）。建议宽 400pt，最高约 600pt，随屏幕空间调整。
 3. 需要处理：审批、执行中断、连接错误，优先于普通任务。审批详情包含 harness、工具、目录、命令/变更、授权范围及信息完整性。
 4. 活动任务：名称、角色、harness、模型、最近事件和经过时间。稳定排序，焦点所在行不因事件更新跳动。
-5. 最近完成：摘要、验证情况与“查看交付”。执行结束标记“待验收”，首版不建立自动“已验收”状态，用户审查后自行决定合入。
-6. 详情：结果、差异、测试、worktree、继续/取消；原生会话跳转按能力开放。长日志按需展开。
+5. 最近完成：摘要、验证情况与“查看交付”。执行结束标记“待验收”，明确区分 Leader 建议与用户对指定快照的验收；验收不自动合入。
+6. 详情：模型报告、验收标准、固定快照、两类审查意见、差异、原生观察、worktree、继续/取消；原生会话跳转按能力开放。长日志按需展开。
 7. 页脚：服务状态与设置；关闭弹层不停止任务。
 
 HIG 一般推荐标准菜单；任务状态与长审批内容属于较复杂场景，故提议 `MenuBarExtra` 的 `.window` 样式。若实测能用标准菜单清晰表达，应继续简化。系统可能隐藏状态栏项，所以 CLI/当前 harness 查询始终可用，通知只用于有意义的完成、失败或待处理事项。
@@ -66,3 +66,5 @@ HIG 一般推荐标准菜单；任务状态与长审批内容属于较复杂场�
 - [Apple MenuBarExtra](https://developer.apple.com/documentation/swiftui/menubarextra)：数据密集型 window、LSUIElement、移除状态栏项时的生命周期。
 - [MenuBarExtraStyle.window](https://developer.apple.com/documentation/swiftui/menubarextrastyle/window)：类弹层窗口与原生控件。
 - [Apple HIG — The menu bar](https://developer.apple.com/design/human-interface-guidelines/the-menu-bar)：符号、可见性限制和优先使用菜单。
+
+验收操作要求用户填写意见，明确引用回合与摘要；不设置默认键盘授权。快照缺失、连接失效或正在封存时禁用。模型自述始终标注来源，静态预览不替代运行验收。
