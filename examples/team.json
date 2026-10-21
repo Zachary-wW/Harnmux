@@ -1,0 +1,6 @@
+{
+  "profiles": {
+    "codex": { "harness": "codex" },
+    "dsh": { "harness": "dsh" }
+  }
+}

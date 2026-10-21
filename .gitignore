@@ -7,3 +7,6 @@ dist/
 coverage/
 .runtime/
 *.log
+.build/
+.swiftpm/
+DerivedData/

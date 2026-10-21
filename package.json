@@ -1,0 +1,32 @@
+{
+  "name": "harness-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local native harness delegation with reviewable worktrees and a macOS status UI",
+  "bin": {
+    "hbridge": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "start": "node dist/cli.js serve",
+    "ui:build": "swift build --package-path macos",
+    "ui:bundle": "bash scripts/build-macos.sh"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "acpx": "0.20.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.0",
+    "@agentclientprotocol/sdk": "1.9.0"
+  },
+  "license": "MIT"
+}
