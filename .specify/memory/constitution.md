@@ -17,7 +17,9 @@ rewriting them. Native Desktop injection and a model gateway are outside the cor
 
 ### III. Isolated Changes and Native Approvals
 
-Execution members MUST use independent Git worktrees based on explicit refs. Changes MUST remain
+Conversation members MUST use private retained working directories without requiring Git. Code
+members MUST use independent Git worktrees based on explicit refs or explicitly selected sealed
+delivery snapshots. Dirty entry changes MUST NOT be silently imported. Changes MUST remain
 available for review; completion MUST NOT merge or discard them. Native approval requests MUST
 reach a user decision or fail closed. Worktrees MUST NOT be described as security sandboxes.
 Existing harness accounts, routers and plugins MUST NOT be silently reconfigured.
@@ -38,6 +40,11 @@ light/dark appearance, keyboard and VoiceOver, and honor reduced motion. Closing
 cancel workers. Unknown progress MUST NOT be represented with invented percentages.
 
 ## Product Boundaries
+
+The product supports conversation, research, writing and code collaboration. Conversation delivery
+MUST be reviewable without a Git diff. Shared context MUST be explicit. Versioned deliveries MUST
+identify the information and code actually handed to another member. Automatic reporting MAY start
+a turn only in service-owned native sessions; uncertain delivery MUST NOT automatically replay.
 
 First release targets local macOS, Codex and DSH, CLI/Skill entry, optional per-member models,
 reviewable delivery, and a SwiftUI menu-bar client. Entry may create a remote-harness Leader which
@@ -63,4 +70,8 @@ and supported by appropriate checks. User instructions and explicit scope decisi
 over local workflow guidance. Ratification records the implementation baseline derived from the
 user's Q1–Q5, Q9 and Q10 answers and subsequent corrections.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-21 | **Last Amended**: 2026-10-21
+Amendment 2.0.0: user instruction on 2026-10-22 expands beyond coding. Replace universal Git
+requirements with conversation/code environments and add managed-Leader reporting. Native approvals,
+separate acceptance, no silent configuration changes and honest verification remain.
+
+**Version**: 2.0.0 | **Ratified**: 2026-10-21 | **Last Amended**: 2026-10-22

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Local native harness delegation with reviewable worktrees and a macOS status UI",
+  "description": "Native harness collaboration for conversation, research and code with a macOS status UI",
   "bin": {
     "harnmux": "dist/cli.js"
   },

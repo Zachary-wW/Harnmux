@@ -24,6 +24,7 @@ struct StatusPanel: View {
     @State private var continuation = ""
     @State private var showEvents = false
     @State private var reviewNote = ""
+    @State private var composing = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -36,7 +37,9 @@ struct StatusPanel: View {
                 Text(error).font(.caption).foregroundStyle(.red).textSelection(.enabled)
             }
             Divider()
-            if let id = model.selected {
+            if composing {
+                HarnmuxComposer(model: model) { composing = false }
+            } else if let id = model.selected {
                 HStack {
                     Button { model.selected = nil; model.detail = nil } label: { Label("任务列表", systemImage: "chevron.left") }
                     Spacer()
@@ -46,6 +49,8 @@ struct StatusPanel: View {
                     ScrollView { detailView(detail).frame(maxWidth: .infinity, alignment: .leading) }
                 } else { ProgressView("读取任务…").frame(maxWidth: .infinity, minHeight: 100) }
             } else {
+                Button { composing = true } label: { Label(model.pendingSubmission == nil ? "发起协作" : "确认待定提交", systemImage: model.pendingSubmission == nil ? "plus" : "arrow.clockwise") }
+                    .buttonStyle(.borderedProminent).disabled(model.connectionError != nil || model.busy)
                 taskList
             }
             Divider()
@@ -64,7 +69,7 @@ struct StatusPanel: View {
         .padding(16)
         .frame(width: 420)
         .frame(maxHeight: 620)
-        .onChange(of: model.selected) { _, _ in continuation = ""; showEvents = false; reviewNote = "" }
+        .onChange(of: model.selected) { _, value in if value != nil { composing = false }; continuation = ""; showEvents = false; reviewNote = "" }
     }
 
     private var header: some View {
@@ -90,7 +95,7 @@ struct StatusPanel: View {
                 ContentUnavailableView {
                     Label("尚无协作任务", systemImage: "tray")
                 } description: {
-                    Text("在 Codex 或 DSH 中使用 Harnmux Skill 发起任务。入口与 Leader 可以分别选择。")
+                    Text("在当前 harness 使用 Skill，或在这里开始聊天、研究与代码任务。")
                 }.frame(minHeight: 190)
             } else {
                 List {
@@ -110,9 +115,10 @@ struct StatusPanel: View {
                 Image(systemName: symbol(task)).foregroundStyle(color(task)).frame(width: 20)
                 VStack(alignment: .leading, spacing: 5) {
                     Text(task.title).font(.body.weight(.medium)).lineLimit(2).multilineTextAlignment(.leading)
-                    Text("\(task.role == "leader" ? "负责人" : "执行者") · \(task.harness) · \(task.actualModel ?? task.requestedModel ?? "原生默认模型")")
+                    Text("\(task.role == "leader" ? "负责人" : "成员") · \(task.harness) · \(task.actualModel ?? task.requestedModel ?? "原生默认模型")")
                         .font(.caption).foregroundStyle(.secondary).lineLimit(2)
                     Text(task.stateLabel).font(.caption).foregroundStyle(color(task))
+                    if let next = task.nextAction { Text(next).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
                 }
                 Spacer(minLength: 0)
                 if task.unread { Image(systemName: "circle.fill").font(.system(size: 6)).foregroundStyle(.tint).accessibilityLabel("未读结果") }
@@ -124,9 +130,16 @@ struct StatusPanel: View {
     @ViewBuilder private func detailView(_ d: TaskDetail) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(d.task.title).font(.headline).textSelection(.enabled)
-            Text("入口 \(d.task.entry) · \(d.task.role == "leader" ? "负责人" : "执行者") \(d.task.harness)")
+            Text("入口 \(d.task.entry) · \(d.task.role == "leader" ? "负责人" : "成员") \(d.task.harness)")
                 .font(.subheadline).foregroundStyle(.secondary)
             Text(d.task.stateLabel).foregroundStyle(color(d.task))
+            Label(d.task.isConversation ? "聊天与研究" : "代码任务", systemImage: d.task.isConversation ? "bubble.left.and.bubble.right" : "chevron.left.forwardslash.chevron.right")
+                .font(.caption).foregroundStyle(.secondary)
+            if let next = d.task.nextAction { Text(next).font(.subheadline.weight(.medium)) }
+            if let duty = d.task.duty { Text("职责：\(duty)").font(.caption).foregroundStyle(.secondary) }
+            if let context = d.task.context, !context.isEmpty {
+                DisclosureGroup("共享背景") { Text(context).font(.caption).textSelection(.enabled) }
+            }
             Text("请求模型：\(d.task.requestedModel ?? "原生默认")\n实际模型：\(d.task.actualModel ?? "尚未报告")")
                 .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
             if let nativeID = d.task.nativeSessionId {
@@ -150,9 +163,10 @@ struct StatusPanel: View {
             if let error = d.task.error { Text(error).foregroundStyle(.red).textSelection(.enabled) }
             if let result = d.task.result, !result.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("模型执行报告").font(.headline)
-                    Text("由原生 harness 返回；测试结论未经过独立验证。").font(.caption).foregroundStyle(.secondary)
+                    Text(d.task.isConversation ? "回答与协作结果" : "模型执行报告").font(.headline)
+                    Text("由原生 harness 返回；内容与结论供你审阅。").font(.caption).foregroundStyle(.secondary)
                     Text(result).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                    if d.task.resultTruncated == true { Label("回答已截断，请检查原生会话", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange) }
                     Button("复制报告") { model.copy(result) }
                 }
             }
@@ -168,7 +182,7 @@ struct StatusPanel: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Label("第 \(d.task.turn) 回合 · 固定交付快照", systemImage: "doc.text.magnifyingglass").font(.headline)
                     Text(digest).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
-                    Text("验收仅针对此快照；后续工作区修改需重新交付。不会自动合入。").font(.caption).foregroundStyle(.secondary)
+                    Text(d.task.isConversation ? "确认针对此版本回答；继续会话会生成新版本。" : "验收仅针对此快照；后续工作区修改需重新交付。不会自动合入。").font(.caption).foregroundStyle(.secondary)
                     if let review = d.task.leaderReview { receipt("Leader 意见", review) }
                     if let review = d.task.acceptance { receipt("你的决定", review) }
                     Button("复制完整交付与审查记录") { Task { await model.copyPacket(d.task) } }
@@ -192,9 +206,19 @@ struct StatusPanel: View {
                     if delivery.truncated { Text("差异较长，展示已截断；请在 worktree 检查完整内容。").font(.caption).foregroundStyle(.secondary) }
                 }
             }
-            if let path = d.task.worktree {
+            if let path = d.task.worktree ?? d.task.directory {
                 Text(path).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
                 Button("在 Finder 查看工作目录") { model.reveal(path) }
+            }
+            if let reports = d.reports, !reports.isEmpty {
+                DisclosureGroup("成员回报 · \(reports.count)") {
+                    ForEach(reports) { report in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(report.label) · 成员第 \(report.childTurn) 回合").font(.caption)
+                            if let reason = report.reason { Text(reason).font(.caption).foregroundStyle(.secondary).textSelection(.enabled) }
+                        }.padding(.vertical, 4)
+                    }
+                }
             }
             if !d.children.isEmpty {
                 Text("成员任务").font(.headline)
@@ -208,7 +232,7 @@ struct StatusPanel: View {
                     }
                 }
             }
-            if d.task.active {
+            if d.task.active || d.children.contains(where: \.active) {
                 Button(d.task.state == "cancelling" ? "取消待确认" : "取消任务", role: .destructive) {
                     Task { await model.perform("/v1/tasks/\(d.task.id)/cancel") }
                 }.disabled(model.busy || model.connectionError != nil || d.task.state == "cancelling")
@@ -244,7 +268,7 @@ struct StatusPanel: View {
                 }
             }.disabled(model.busy || model.connectionError != nil || d.task.active || d.finalizing == true ||
                        reviewNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-                       (decision == "accept" && (d.task.state != "completed" || d.task.delivery == nil || d.task.delivery?.truncated == true)))
+                       (decision == "accept" && (!d.task.canAccept || d.children.contains { $0.state != "completed" || $0.deliveryDigest == nil })))
         }
     }
     private func decisionButtons(_ approval: HarnmuxApproval) -> some View {

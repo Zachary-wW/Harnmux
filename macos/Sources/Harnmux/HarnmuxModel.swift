@@ -9,11 +9,16 @@ final class HarnmuxModel: ObservableObject {
     @Published var selected: String?
     @Published var connectionError: String? = "正在连接本地服务…"
     @Published var operationError: String?
+    @Published var profiles: [String: HarnessProfile] = [:]
+    @Published var pendingSubmission: [String: JSONValue]?
     @Published var busy = false
     @Published var lastRefresh: Date?
     private var refreshing = false
     private var poller: Task<Void, Never>?
     init() {
+        if let data = try? Data(contentsOf: home.appendingPathComponent("pending-submission.json")) {
+            pendingSubmission = try? JSONDecoder().decode([String: JSONValue].self, from: data)
+        }
         if let data = try? Data(contentsOf: home.appendingPathComponent("ui-cache.json")),
            let saved = try? JSONDecoder().decode(TaskList.self, from: data) { tasks = saved.tasks }
         poller = Task { [weak self] in
@@ -52,7 +57,7 @@ final class HarnmuxModel: ObservableObject {
         let (data, response) = try await URLSession.shared.data(for: req)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             let error = try? JSONDecoder().decode(ErrorResponse.self, from: data)
-            throw ClientError(error?.error ?? "本地服务请求失败")
+            throw ClientError(error?.error ?? "本地服务请求失败", definite: (response as? HTTPURLResponse).map { (400..<500).contains($0.statusCode) } ?? false)
         }
         return data
     }
@@ -63,6 +68,10 @@ final class HarnmuxModel: ObservableObject {
         do {
             let list = try JSONDecoder().decode(TaskList.self, from: await request("/v1/tasks"))
             tasks = list.tasks
+            if case .string(let key) = pendingSubmission?["requestId"], let created = tasks.first(where: { $0.requestId == key }) {
+                selected = created.id; clearSubmission()
+            }
+            profiles = try JSONDecoder().decode(Capabilities.self, from: await request("/v1/capabilities")).profiles
             if let cache = try? JSONEncoder().encode(list) {
                 let path = home.appendingPathComponent("ui-cache.json")
                 try? cache.write(to: path, options: .atomic)
@@ -91,6 +100,35 @@ final class HarnmuxModel: ObservableObject {
         do { _ = try await request(path, body: body); await refresh() }
         catch { operationError = error.localizedDescription }
     }
+    private func clearSubmission() {
+        pendingSubmission = nil
+        try? FileManager.default.removeItem(at: home.appendingPathComponent("pending-submission.json"))
+    }
+    func submit(mode: String, profile: String, workers: Set<String>, instructions: String, context: String, repo: String) async {
+        guard !busy else { return }
+        busy = true; operationError = nil
+        defer { busy = false }
+        do {
+            if pendingSubmission == nil {
+                var body: [String: JSONValue] = [
+                    "requestId": .string(UUID().uuidString), "entry": .string("menu-bar"), "profile": .string(profile),
+                    "mode": .string(mode), "instructions": .string(instructions), "context": .string(context),
+                    "allowedWorkers": .array(workers.sorted().map { .string($0) }), "autoReport": .bool(true)
+                ]
+                if mode == "code" { body["repo"] = .string(repo) }
+                let data = try JSONEncoder().encode(body)
+                let path = home.appendingPathComponent("pending-submission.json").path
+                guard FileManager.default.createFile(atPath: path, contents: data, attributes: [.posixPermissions: 0o600]) else { throw ClientError("无法保存提交，请检查配置目录") }
+                pendingSubmission = body
+            }
+            let data = try await request("/v1/tasks", body: pendingSubmission)
+            let task = try JSONDecoder().decode(HarnmuxTask.self, from: data)
+            clearSubmission(); selected = task.id; await refresh()
+        } catch {
+            if let error = error as? ClientError, error.definite { clearSubmission() }
+            operationError = pendingSubmission == nil ? error.localizedDescription : "提交情况待确认。请刷新或重试同一次提交，避免重复任务。\n\(error.localizedDescription)"
+        }
+    }
     func copyPacket(_ task: HarnmuxTask) async {
         guard !busy else { return }
         busy = true; operationError = nil
@@ -109,5 +147,5 @@ final class HarnmuxModel: ObservableObject {
     }
     private struct Endpoint: Decodable { let url: String }
     private struct ErrorResponse: Decodable { let error: String }
-    private struct ClientError: LocalizedError { let message: String; init(_ message: String) { self.message = message }; var errorDescription: String? { message } }
+    private struct ClientError: LocalizedError { let message: String; let definite: Bool; init(_ message: String, definite: Bool = false) { self.message = message; self.definite = definite }; var errorDescription: String? { message } }
 }

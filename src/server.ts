@@ -5,8 +5,8 @@ import { readFileSync, writeFileSync, openSync, closeSync, unlinkSync } from 'no
 import { z } from 'zod';
 import { TaskService } from './service.js';
 import { token, writePrivate } from './config.js';
-import { HarnmuxError, CriteriaSchema, type Principal, type Runner } from './types.js';
-const textBody=z.object({instructions:z.string().min(1).max(64000),acceptanceCriteria:CriteriaSchema.optional()}).strict();
+import { HarnmuxError, CriteriaSchema, InputsSchema, type Principal, type Runner } from './types.js';
+const textBody=z.object({instructions:z.string().min(1).max(64000),acceptanceCriteria:CriteriaSchema.optional(),inputs:InputsSchema.optional()}).strict();
 const equal=(a:string,b:string)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length && timingSafeEqual(x,y);};
 async function body(req:IncomingMessage){
   let size=0;const parts:Buffer[]=[];
@@ -35,7 +35,7 @@ export async function startServer(home:string,runners?:Record<'codex'|'dsh',Runn
       let data:unknown;let status=200;
       if(req.method==='GET'&&path==='/v1/tasks')data={tasks:service.list(principal)};
       else if(req.method==='POST'&&path==='/v1/tasks'){const r=service.create(principal,await body(req));data=r.task;status=r.created?201:200;}
-      else if(req.method==='GET'&&path==='/v1/capabilities')data={profiles:Object.fromEntries(Object.entries(service.profiles).map(([name,p])=>[name,{harness:p.harness,model:p.model,installedHarnessVerification:'unverified'}])),capabilities:{nativeExecution:'supported',modelSelection:'supported',approvals:'supported',continuation:'supported',deliveryPackets:'supported',separateLeaderAndUserReview:'supported',restartAutoResume:'unsupported',desktopWakeup:'unsupported',desktopSessionEmbedding:'unsupported',specificDshPlugins:'unverified'},verification:'supported describes implemented protocol operations, not installed-harness certification; see repository verification record for test evidence'};
+      else if(req.method==='GET'&&path==='/v1/capabilities')data={profiles:Object.fromEntries(Object.entries(service.profiles).map(([name,p])=>[name,{harness:p.harness,model:p.model,installedHarnessVerification:'unverified'}])),capabilities:{conversationTasks:'supported',explicitDeliveryInputs:'supported',codeSnapshots:'supported',managedLeaderReports:'supported',nativeExecution:'supported',modelSelection:'supported',approvals:'supported',continuation:'supported',deliveryPackets:'supported',separateLeaderAndUserReview:'supported',restartAutoResume:'unsupported',desktopWakeup:'unsupported',desktopSessionEmbedding:'unsupported',specificDshPlugins:'unverified'},verification:'supported describes implemented protocol operations, not installed-harness certification; see repository verification record for test evidence'};
       else if(req.method==='POST'&&path==='/v1/shutdown'){
         if(principal.kind!=='admin')throw new HarnmuxError('User action required',403);
         z.object({}).strict().parse(await body(req));data={stopping:true};setImmediate(()=>{void close().catch(()=>{});});
@@ -47,7 +47,7 @@ export async function startServer(home:string,runners?:Record<'codex'|'dsh',Runn
         else if(m&&req.method==='GET'&&m[2]==='packet')data=service.packet(principal,m[1]!,url.searchParams.has('turn')?Number(url.searchParams.get('turn')):undefined);
         else if(m&&req.method==='POST'){
           const b=await body(req);
-          if(m[2]==='continue'){const text=textBody.parse(b);data=service.continue(principal,m[1]!,text.instructions,text.acceptanceCriteria);}
+          if(m[2]==='continue'){const text=textBody.parse(b);data=service.continue(principal,m[1]!,text.instructions,text.acceptanceCriteria,text.inputs);}
           else if(m[2]==='review')data=service.review(principal,m[1]!,b);
           else if(m[2]==='cancel'){z.object({}).strict().parse(b);data=await service.cancel(principal,m[1]!);}
           else if(m[2]==='ack'){z.object({}).strict().parse(b);data=service.ack(principal,m[1]!);}

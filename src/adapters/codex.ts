@@ -1,16 +1,16 @@
-import type { Runner } from '../types.js';
+import { taskDirectory, type Runner } from '../types.js';
 import { RpcProcess } from './rpc.js';
 export const runCodex: Runner = async(ctx,prompt)=>{
-  const rpc=new RpcProcess(ctx.profile.command ?? ['codex','app-server','--listen','stdio://'],ctx.task.worktree!,ctx.env);
+  const rpc=new RpcProcess(ctx.profile.command ?? ['codex','app-server','--listen','stdio://'],taskDirectory(ctx.task)!,ctx.env);
   ctx.registerStop(()=>rpc.stop());
   let threadId=ctx.task.nativeSessionId;let turnId:string|undefined;let text='';let settled=false;
-  let lastMessage='';let finalAnswer='';let deltaTruncated=false;
-  const retained=(value:string)=>value.length>262144?'[Output truncated; inspect native session for full text]\n'+value.slice(-262000):value;
+  let lastMessage='';let finalAnswer='';let deltaTruncated=false;let outputTruncated=false;
+  const retained=(value:string)=>{outputTruncated ||= value.length>262144;return value.length>262144?'[Output truncated; inspect native session for full text]\n'+value.slice(-262000):value;};
   const answer=()=>retained(finalAnswer || lastMessage || (deltaTruncated?'[Output truncated; inspect native session for full text]\n':'')+text);
   const items=new Map<string,unknown>();
-  let resolveDone!:(value:{state:'completed'|'cancelled';text:string})=>void;
+  let resolveDone!:(value:{state:'completed'|'cancelled';text:string;truncated?:boolean})=>void;
   let rejectDone!:(error:Error)=>void;
-  const done=new Promise<{state:'completed'|'cancelled';text:string}>((resolve,reject)=>{resolveDone=resolve;rejectDone=reject;});
+  const done=new Promise<{state:'completed'|'cancelled';text:string;truncated?:boolean}>((resolve,reject)=>{resolveDone=resolve;rejectDone=reject;});
   // A process may fail while initialization is still awaiting a response.
   void done.catch(()=>{});
   rpc.onFailure=e=>{if(!settled){settled=true;rejectDone(e);}};
@@ -35,7 +35,7 @@ export const runCodex: Runner = async(ctx,prompt)=>{
       })();return;
     }
     if(p.threadId && threadId && p.threadId!==threadId)return;
-    if(m.method==='turn/started')turnId=p.turn?.id;
+    if(m.method==='turn/started'){turnId=p.turn?.id;ctx.started?.();}
     if(m.method==='item/agentMessage/delta'){
       const next=text+String(p.delta ?? '');deltaTruncated ||= next.length>262144;
       text=next.slice(-262144);ctx.event('text',{text:String(p.delta ?? '').slice(0,4096)});
@@ -47,15 +47,15 @@ export const runCodex: Runner = async(ctx,prompt)=>{
       ctx.event('native_item',p.item);
     }else if(m.method==='turn/completed' && !settled){
       settled=true;const status=p.turn?.status;
-      if(status==='completed')resolveDone({state:ctx.signal.aborted?'cancelled':'completed',text:answer()});
-      else if(status==='interrupted')resolveDone({state:'cancelled',text:answer()});
+      if(status==='completed')resolveDone({state:ctx.signal.aborted?'cancelled':'completed',text:answer(),truncated:outputTruncated||(!finalAnswer&&!lastMessage&&deltaTruncated)});
+      else if(status==='interrupted')resolveDone({state:'cancelled',text:answer(),truncated:outputTruncated||(!finalAnswer&&!lastMessage&&deltaTruncated)});
       else rejectDone(new Error(p.turn?.error?.message || `Native turn ended: ${status}`));
     }else if(m.method==='error')ctx.event('native_error',p);
   };
   try{
     await rpc.request('initialize',{clientInfo:{name:'harnmux',version:'0.1.0'},capabilities:{experimentalApi:false}});
     rpc.send({method:'initialized'});
-    const params={cwd:ctx.task.worktree,sandbox:'workspace-write',approvalPolicy:'on-request',approvalsReviewer:'user',...(ctx.profile.model?{model:ctx.profile.model}:{})};
+    const params={cwd:taskDirectory(ctx.task),sandbox:'workspace-write',approvalPolicy:'on-request',approvalsReviewer:'user',...(ctx.profile.model?{model:ctx.profile.model}:{})};
     const response=await rpc.request(threadId?'thread/resume':'thread/start',{...params,...(threadId?{threadId}:{})});
     threadId=response.thread.id;
     if(response.approvalPolicy!=='on-request' || response.sandbox?.type==='dangerFullAccess')throw new Error('Native permission policy did not retain requested boundary');
@@ -65,7 +65,7 @@ export const runCodex: Runner = async(ctx,prompt)=>{
     ctx.registerCancel(async()=>{if(turnId)await rpc.request('turn/interrupt',{threadId,turnId},5000);else rpc.stop();});
     if(ctx.signal.aborted)throw new Error('Cancelled before native turn');
     const turn=await rpc.request('turn/start',{threadId,input:[{type:'text',text:prompt}]});
-    turnId=turn.turn.id;
+    turnId=turn.turn.id;ctx.started?.();
     return await done;
   }finally{settled=true;rpc.stop();}
 };

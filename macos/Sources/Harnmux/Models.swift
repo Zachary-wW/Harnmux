@@ -3,6 +3,16 @@ import Foundation
 struct HarnmuxTask: Codable, Identifiable, Sendable {
     let id: String
     let role: String
+    let requestId: String?
+    let mode: String?
+    let goal: String?
+    let context: String?
+    let duty: String?
+    let directory: String?
+    let nextAction: String?
+    let deliveryCurrent: Bool?
+    let resultTruncated: Bool?
+    let autoReport: Bool?
     let parentId: String?
     let entry: String
     let profile: String
@@ -29,14 +39,16 @@ struct HarnmuxTask: Codable, Identifiable, Sendable {
         let truncated: Bool
     }
     var active: Bool { !["completed", "failed", "cancelled", "interrupted"].contains(state) }
-    var title: String { instructions.components(separatedBy: .newlines).first ?? instructions }
+    var title: String { (goal ?? instructions).components(separatedBy: .newlines).first ?? instructions }
+    var isConversation: Bool { mode == "conversation" || (mode == nil && worktree == nil && directory != nil) }
+    var canAccept: Bool { state == "completed" && deliveryCurrent != false && resultTruncated != true && (isConversation ? !(result ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty : delivery != nil && delivery?.truncated != true) }
     var stateLabel: String {
         switch state {
         case "preparing": "准备目录"
         case "running": "执行中"
         case "waiting_approval": "等待审批"
         case "cancelling": "取消中"
-        case "completed": acceptance?.decision == "accept" ? "执行完成 · 快照已验收" : acceptance?.decision == "request_changes" ? "执行完成 · 需修改" : "执行完成 · 待验收"
+        case "completed": acceptance?.decision == "accept" ? "交付已确认" : acceptance?.decision == "request_changes" ? "执行完成 · 需修改" : "结果就绪 · 待审阅"
         case "failed": "失败"
         case "cancelled": "已取消"
         case "interrupted": "已中断 · 需核查"
@@ -65,6 +77,7 @@ struct TaskDetail: Decodable, Sendable {
     let events: [HarnmuxEvent]
     let children: [HarnmuxTask]
     var finalizing: Bool? = nil
+    var reports: [ResultReport]? = nil
 }
 struct HarnmuxEvent: Decodable, Sendable, Identifiable {
     let seq: Int
@@ -113,3 +126,26 @@ indirect enum JSONValue: Codable, Sendable {
         return (try? String(data: encoder.encode(self), encoding: .utf8)) ?? "暂无详情"
     }
 }
+
+struct ResultReport: Decodable, Identifiable, Sendable {
+    let id: String
+    let childId: String
+    let childTurn: Int
+    let state: String
+    let reason: String?
+    var label: String {
+        switch state {
+        case "pending": "等待 Leader 接收"
+        case "starting": "正在向 Leader 回报"
+        case "delivered": "Leader 已接收"
+        case "observed": "Leader 已查阅"
+        default: "接收情况待核查"
+        }
+    }
+}
+struct HarnessProfile: Decodable, Sendable {
+    let harness: String
+    let model: String?
+    var label: String { "\(harness) · \(model ?? "原生默认模型")" }
+}
+struct Capabilities: Decodable { let profiles: [String: HarnessProfile] }

@@ -31,6 +31,13 @@ test('renamed CLI starts, seals/reviews/continues packets, installs Skill and st
   const skill=await readFile(join(repo,'.agents/skills/harnmux/SKILL.md'),'utf8');
   assert.match(skill,/name: harnmux/);assert.ok(skill.includes(resolve('dist/cli.js')));assert.match(skill,/recommend_accept/);
   await assert.rejects(()=>exec(process.execPath,[resolve('scripts/install-skill.mjs'),repo],{env}),/already exists/);
+  const chat=await cli('run','--entry','dsh','--leader','codex','--request-id','cli-chat','--context','Travel preferences','--duty','planner','--task','Discuss a weekend trip');
+  assert.equal(chat.mode,'conversation');assert.equal(chat.repo,undefined);
+  await cli('wait',chat.id,'--timeout','10');const chatPacket=await cli('packet',chat.id);
+  assert.equal(chatPacket.packet.contract.context,'Travel preferences');assert.equal(chatPacket.packet.changes,undefined);
+  const ref=`${chat.id}:1:${chatPacket.digest}`;
+  const followup=await cli('run','--leader','codex','--request-id','cli-followup','--input',ref,'--manual-results','--task','Compare with this prior answer');
+  await cli('wait',followup.id,'--timeout','10');assert.equal((await cli('packet',followup.id)).packet.contract.inputs[0].digest,chatPacket.digest);
   assert.equal(await readFile(join(repo,'file.txt'),'utf8'),'original\n');
  }finally{
   await cli('stop');
